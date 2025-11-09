@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Body, Controller, Post, HttpException, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './create-user.dto';
 
@@ -25,10 +19,7 @@ export class UsersController {
         // Use NestJS HttpException for better error handling
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
       }
-      throw new HttpException(
-        'Unknown error',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new HttpException('Unknown error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

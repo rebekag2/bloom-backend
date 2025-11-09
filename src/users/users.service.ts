@@ -12,10 +12,7 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async validatePassword(
-    plainPassword: string,
-    hashedPassword: string,
-  ): Promise<boolean> {
+  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
 

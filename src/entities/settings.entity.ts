@@ -14,7 +14,7 @@ export class Setting {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, (user) => user.id, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
@@ -26,14 +26,7 @@ export class Setting {
     type: 'enum',
     enum: ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'],
   })
-  firstDayOfWeek:
-    | 'Luni'
-    | 'Marți'
-    | 'Miercuri'
-    | 'Joi'
-    | 'Vineri'
-    | 'Sâmbătă'
-    | 'Duminică';
+  firstDayOfWeek: 'Luni' | 'Marți' | 'Miercuri' | 'Joi' | 'Vineri' | 'Sâmbătă' | 'Duminică';
 
   @Column({ name: 'default_focus_time', type: 'int' })
   defaultFocusTime: number;
