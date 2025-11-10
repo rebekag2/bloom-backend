@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
 import { EmotionsModule } from './emotions/emotions.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { EmotionsModule } from './emotions/emotions.module';
     UsersModule,
     SettingsModule,
     EmotionsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -4,7 +4,7 @@ import { Setting } from 'src/entities/settings.entity';
 import { UpdateSettingsDto } from './update-settings.dto';
 import { ApiBody, ApiParam, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('settings')
+@ApiTags('Settings')
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}

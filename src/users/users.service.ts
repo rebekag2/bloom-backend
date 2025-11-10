@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/entities/users.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from './create-user.dto';
+import { User } from 'src/entities/users.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -19,7 +20,7 @@ export class UsersService {
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     const { username, email, password } = createUserDto;
 
-    // Check if user with the same email or username already exists (optional but recommended)
+    // Check if user with the same email or username already exists
     const existingUser = await this.usersRepository.findOne({
       where: [{ email }, { username }],
     });
@@ -30,9 +31,27 @@ export class UsersService {
     const user = this.usersRepository.create({
       username,
       email,
-      password, // this will be hashed automatically by @BeforeInsert in User entity
+      password, // hashed automatically by @BeforeInsert in your entity
     });
 
     return this.usersRepository.save(user);
+  }
+
+  // 🟢 LOGIN LOGIC
+  async loginUser(loginUserDto: LoginUserDto): Promise<Partial<User>> {
+    const { email, password } = loginUserDto;
+
+    const user = await this.usersRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const isPasswordValid = await this.validatePassword(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...result } = user; // exclude password from response
+    return result;
   }
 }
