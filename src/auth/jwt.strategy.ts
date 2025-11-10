@@ -5,19 +5,16 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(private configService: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Extract JWT from Bearer token in header
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'), // Get secret from config service (.env)
+      secretOrKey: configService.get<string>('JWT_ACCESS_SECRET'),
     });
   }
 
   async validate(payload: any) {
-    // This method is called automatically after JWT is verified.
-    // The "payload" is the decoded JWT payload.
-    // Here, you can add extra validation or fetch user info from DB if needed.
-    // For now, just return the user data embedded in JWT (like userId and email).
-    return { userId: payload.sub, email: payload.email };
+    console.log('Validating JWT payload:', payload);
+    return { userId: payload.sub, username: payload.username };
   }
 }

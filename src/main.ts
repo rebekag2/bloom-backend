@@ -11,6 +11,14 @@ async function bootstrap() {
     .setTitle('My API')
     .setDescription('API description for my app')
     .setVersion('1.0')
+    .addBearerAuth( // This adds the "Authorize" button with Bearer token support
+    {
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    },
+    'access-token', // this is the name of the security scheme
+  )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -1,5 +1,5 @@
 import { IsBoolean, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 // Define enum for days of the week
 export enum DaysOfWeek {
@@ -13,12 +13,13 @@ export enum DaysOfWeek {
 }
 
 export class UpdateSettingsDto {
-  @ApiPropertyOptional({ description: 'Enable or disable notification sound' })
+  @ApiProperty({example: true, description: 'Enable or disable notification sound' })
   @IsOptional()
   @IsBoolean()
   notificationSound?: boolean;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
+    example: 'Luni',
     description: 'First day of the week',
     enum: DaysOfWeek,
   })
@@ -26,7 +27,8 @@ export class UpdateSettingsDto {
   @IsEnum(DaysOfWeek)
   firstDayOfWeek?: DaysOfWeek;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
+    example: 25 ,
     description: 'Default focus time in minutes (minimum 1)',
     minimum: 1,
     type: 'integer',

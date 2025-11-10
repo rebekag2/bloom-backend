@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
 import { EmotionsModule } from './emotions/emotions.module';
 import { AuthModule } from './auth/auth.module';
+import { ProtectedController } from './protected/protected.controller';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { AuthModule } from './auth/auth.module';
     EmotionsModule,
     AuthModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ProtectedController],
   providers: [AppService],
 })
 export class AppModule {}
