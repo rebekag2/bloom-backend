@@ -2,21 +2,11 @@ import { Body, Controller, Post, UseGuards, Req, UnauthorizedException } from '@
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RefreshJwtGuard } from './refresh-jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Post('login')
-  async login(@Body() body: { username: string; password: string }) {
-    const user = await this.authService.validateUser(body.username, body.password);
-
-    if (!user) {
-      return { message: 'Invalid username or password' };
-    }
-
-    return this.authService.login(user);
-  }
 
   @UseGuards(RefreshJwtGuard)
   @Post('refresh')
@@ -29,5 +19,14 @@ export class AuthController {
     }
 
     return this.authService.refresh(user.sub, refreshToken);
+  }
+
+  @ApiBearerAuth('access-token')     
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req) {
+    const user = req.user;
+    await this.authService.logout(user.sub);
+    return { message: 'Logged out successfully' };
   }
 }

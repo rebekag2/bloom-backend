@@ -9,10 +9,10 @@ import { AuthGuard } from '@nestjs/passport';
 export class EmotionsController {
   constructor(private readonly emotionsService: EmotionsService) {}
 
-@ApiBearerAuth('access-token')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Get()
   getAll(): Promise<Emotion[]> {
     return this.emotionsService.findAll();
-  }
+  } 
 }

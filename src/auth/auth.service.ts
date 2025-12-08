@@ -46,6 +46,11 @@ export class AuthService {
     };
   }
 
+  async logout(userId: number) {
+  // Clear the stored refresh token for this user
+    await this.usersRepo.update(userId, { refreshToken: null });
+  }
+
   async refresh(userId: number, refreshToken: string) {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user || !user.refreshToken) {
