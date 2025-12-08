@@ -1,17 +1,31 @@
-import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { RefreshJwtGuard } from './refresh-jwt.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Post('login')
+  async login(@Body() body: { username: string; password: string }) {
+    const user = await this.authService.validateUser(
+      body.username,
+      body.password,
+    );
+
+    if (!user) {
+      return { message: 'Invalid username or password' };
+    }
+
+    return this.authService.login(user);
+  }
+
+  @UseGuards(RefreshJwtGuard)
   @Post('refresh')
-  async refresh(@Body() body: { refreshToken: string }) {
-    const payload = this.authService.validateRefreshToken(body.refreshToken);
-
-    // Generate a new access token
-    const accessToken = this.authService.generateAccessToken({ username: payload.username, sub: payload.sub });
-
-    return { accessToken };
+  async refresh(@Req() req) {
+    const user = req.user; // from refresh strategy
+    const refreshToken = req.body.refreshToken;
+    return this.authService.refresh(user.sub, refreshToken);
   }
 }
