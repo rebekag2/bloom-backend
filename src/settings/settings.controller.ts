@@ -6,8 +6,8 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @ApiTags('Settings')
-// @ApiBearerAuth()            // Adds the lock icon in Swagger UI (token required)
-// @UseGuards(JwtAuthGuard)    // Protects all routes in this controller
+@ApiBearerAuth('access-token')     
+@UseGuards(JwtAuthGuard)
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
