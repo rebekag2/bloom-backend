@@ -28,15 +28,14 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: '30m', // 30 minutes
+      expiresIn: '10m',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: '7d', // 7 days
+      expiresIn: '7d',
     });
 
-    // store hashed refresh token in DB
     const hashed = await bcrypt.hash(refreshToken, 10);
     await this.usersRepo.update(user.id, { refreshToken: hashed });
 
@@ -47,7 +46,6 @@ export class AuthService {
   }
 
   async logout(userId: number) {
-  // Clear the stored refresh token for this user
     await this.usersRepo.update(userId, { refreshToken: null });
   }
 
@@ -66,7 +64,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: '30m',
+      expiresIn: '10m',
     });
 
     return { accessToken };

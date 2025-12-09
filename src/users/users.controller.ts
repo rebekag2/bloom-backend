@@ -16,8 +16,19 @@ export class UsersController {
   async signup(@Body() createUserDto: CreateUserDto) {
     try {
       const newUser = await this.usersService.createUser(createUserDto);
-      const { password, ...userWithoutPassword } = newUser;
-      return userWithoutPassword;
+
+      // Immediately log the user in after signup
+      const tokens = await this.authService.login(newUser);
+
+      return {
+        message: 'Signup successful',
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+        },
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
@@ -31,7 +42,6 @@ export class UsersController {
     try {
       const user = await this.usersService.loginUser(loginUserDto);
 
-      // Use AuthService.login() to get tokens
       const tokens = await this.authService.login(user as User);
 
       return {
@@ -39,7 +49,6 @@ export class UsersController {
         user: {
           id: user.id,
           username: user.username,
-          // don't send password
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
