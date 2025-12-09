@@ -12,11 +12,9 @@ export class SettingsService {
     private readonly settingsRepository: Repository<Setting>,
   ) {}
 
-  // 🟢 Get settings for a specific user
   async getUserSettings(userId: number): Promise<Setting> {
     const settings = await this.settingsRepository.findOne({
       where: { user: { id: userId } },
-      relations: ['user'],
     });
 
     if (!settings) {
@@ -26,23 +24,30 @@ export class SettingsService {
     return settings;
   }
 
-  async saveUserSettings(userId: number, data: Partial<Setting>): Promise<Setting> {
-    let settings = await this.settingsRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['user'],
+  async createDefaultSettingsForUser(user: User): Promise<Setting> {
+    const settings = this.settingsRepository.create({
+      user,
+      notificationSound: true,
+      firstDayOfWeek: 'Luni',
+      defaultFocusTime: 25,
     });
 
-    if (settings) {
-      // update existing settings
-      Object.assign(settings, data);
-    } else {
-      // create new settings entry
-      settings = this.settingsRepository.create({
-        ...data,
-        user: { id: userId } as User,
-      });
+    return await this.settingsRepository.save(settings);
+  }
+
+  async updateUserSettings(
+    userId: number,
+    data: Partial<Setting>,
+  ): Promise<Setting> {
+    const settings = await this.settingsRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    if (!settings) {
+      throw new NotFoundException('Settings not found');
     }
 
+    Object.assign(settings, data);
     return await this.settingsRepository.save(settings);
   }
 }

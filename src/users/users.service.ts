@@ -5,12 +5,15 @@ import * as bcrypt from 'bcrypt';
 import { User } from 'src/entities/users.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { SettingsService } from 'src/settings/settings.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+
+    private readonly settingsService: SettingsService, // ⬅ ADD THIS
   ) {}
 
   async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
@@ -20,7 +23,7 @@ export class UsersService {
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     const { username, email, password } = createUserDto;
 
-    // Check if user with the same email or username already exists
+    // Check for duplicates
     const existingUser = await this.usersRepository.findOne({
       where: [{ email }, { username }],
     });
@@ -28,16 +31,21 @@ export class UsersService {
       throw new Error('User with this email or username already exists');
     }
 
+    // Create user
     const user = this.usersRepository.create({
       username,
       email,
-      password, // hashed automatically by @BeforeInsert in your entity
+      password,
     });
 
-    return this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+
+    // ⬇⬇⬇ CREATE DEFAULT SETTINGS FOR THIS USER
+    await this.settingsService.createDefaultSettingsForUser(savedUser);
+
+    return savedUser;
   }
 
-  // 🟢 LOGIN LOGIC
   async loginUser(loginUserDto: LoginUserDto): Promise<Partial<User>> {
     const { email, password } = loginUserDto;
 
@@ -50,8 +58,8 @@ export class UsersService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...result } = user; // exclude password from response
+
+    const { password: _, ...result } = user;
     return result;
   }
 }
