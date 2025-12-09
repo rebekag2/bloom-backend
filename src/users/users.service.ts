@@ -40,7 +40,6 @@ export class UsersService {
 
     const savedUser = await this.usersRepository.save(user);
 
-    // ⬇⬇⬇ CREATE DEFAULT SETTINGS FOR THIS USER
     await this.settingsService.createDefaultSettingsForUser(savedUser);
 
     return savedUser;

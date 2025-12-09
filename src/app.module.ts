@@ -7,7 +7,8 @@ import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
 import { EmotionsModule } from './emotions/emotions.module';
 import { AuthModule } from './auth/auth.module';
-import { ProtectedController } from './protected/protected.controller';
+import { FocusSessionEmotionsModule } from './focus-session-emotions/focus-session-emotions.module';
+import { FocusSessionsModule } from './focus-sessions/focus-sessions.module';
 
 @Module({
   imports: [
@@ -30,8 +31,11 @@ import { ProtectedController } from './protected/protected.controller';
     SettingsModule,
     EmotionsModule,
     AuthModule,
+    FocusSessionEmotionsModule,
+    FocusSessionEmotionsModule,
+    FocusSessionsModule,
   ],
-  controllers: [AppController, ProtectedController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
