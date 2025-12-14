@@ -17,7 +17,7 @@ export class FocusSessionEmotion {
 
   @ManyToOne(() => Emotion)
   @JoinColumn({ name: 'emotion_after_id' })
-  emotionAfter: Emotion;
+  emotionAfter: Emotion | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;

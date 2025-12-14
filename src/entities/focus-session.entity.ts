@@ -13,15 +13,15 @@ export class FocusSession {
   @Column({ name: 'start_time', type: 'datetime' })
   startTime: Date;
 
-  @Column({ name: 'end_time', type: 'datetime' })
-  endTime: Date;
+  @Column({ name: 'end_time', type: 'datetime', nullable: true })
+  endTime: Date | null;
 
   @Column({ name: 'duration_minutes', type: 'int' })
   durationMinutes: number;
 
-  @Column({ name: 'canceled', type: 'tinyint', width: 1 })
+  @Column({ type: 'tinyint', width: 1, default: 0 })
   canceled: boolean;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
