@@ -12,13 +12,15 @@ export class FocusSessionsService {
   constructor(
     @InjectRepository(FocusSession)
     private readonly focusSessionsRepository: Repository<FocusSession>,
+
     @InjectRepository(FocusSessionEmotion)
     private readonly focusSessionEmotionRepository: Repository<FocusSessionEmotion>,
+
     @InjectRepository(Emotion)
     private readonly emotionRepository: Repository<Emotion>,
   ) {}
 
-  // Create session when user clicks start timer (with emotionBefore)
+  // START SESSION
   async startFocusSession(
     userId: number,
     durationMinutes: number,
@@ -26,45 +28,53 @@ export class FocusSessionsService {
   ): Promise<FocusSession> {
     const now = new Date();
 
-    // Create session with no endTime yet, canceled false
     const session = this.focusSessionsRepository.create({
       user: { id: userId } as User,
       startTime: now,
       endTime: null,
-      durationMinutes,
+      durationMinutes, // planned duration (temporary)
       canceled: false,
     });
+
     const savedSession = await this.focusSessionsRepository.save(session);
 
-    // Link emotionBefore
-    const emotionBefore = await this.emotionRepository.findOneBy({ id: emotionBeforeId });
+    const emotionBefore = await this.emotionRepository.findOneBy({
+      id: emotionBeforeId,
+    });
     if (!emotionBefore) {
       throw new NotFoundException('Emotion before session not found');
     }
+
     const sessionEmotion = this.focusSessionEmotionRepository.create({
       focusSession: savedSession,
       emotionBefore,
       emotionAfter: null,
     });
+
     await this.focusSessionEmotionRepository.save(sessionEmotion);
 
     return savedSession;
   }
 
-async cancelFocusSession(sessionId: number, focusedMinutes: number): Promise<FocusSession> {
-  const session = await this.focusSessionsRepository.findOne({
-    where: { id: sessionId },
-  });
-  if (!session) throw new NotFoundException('Focus session not found');
+  // CANCEL SESSION (same time logic as finish)
+  async cancelFocusSession(sessionId: number): Promise<FocusSession> {
+    const session = await this.focusSessionsRepository.findOne({
+      where: { id: sessionId },
+    });
+    if (!session) throw new NotFoundException('Focus session not found');
 
-  session.canceled = true;
-  session.endTime = new Date();
-  session.durationMinutes = focusedMinutes; // Update duration with actual focused time
+    const endTime = new Date();
+    const diffMs = endTime.getTime() - session.startTime.getTime();
+    const focusedMinutes = Math.max(1, Math.floor(diffMs / 60000));
 
-  return this.focusSessionsRepository.save(session);
-}
+    session.endTime = endTime;
+    session.durationMinutes = focusedMinutes;
+    session.canceled = true;
 
-  // Finish session normally and add emotionAfter
+    return this.focusSessionsRepository.save(session);
+  }
+
+  // FINISH SESSION
   async finishFocusSession(
     sessionId: number,
     emotionAfterId: number,
@@ -74,16 +84,23 @@ async cancelFocusSession(sessionId: number, focusedMinutes: number): Promise<Foc
     });
     if (!session) throw new NotFoundException('Focus session not found');
 
-    const emotionAfter = await this.emotionRepository.findOneBy({ id: emotionAfterId });
-    if (!emotionAfter) throw new NotFoundException('Emotion after session not found');
+    const emotionAfter = await this.emotionRepository.findOneBy({
+      id: emotionAfterId,
+    });
+    if (!emotionAfter) {
+      throw new NotFoundException('Emotion after session not found');
+    }
 
-    session.endTime = new Date();
+    const endTime = new Date();
+    const diffMs = endTime.getTime() - session.startTime.getTime();
+    const focusedMinutes = Math.max(1, Math.floor(diffMs / 60000));
+
+    session.endTime = endTime;
+    session.durationMinutes = focusedMinutes;
     session.canceled = false;
 
-    // Update session
     await this.focusSessionsRepository.save(session);
 
-    // Update the FocusSessionEmotion for this session - add emotionAfter
     const sessionEmotion = await this.focusSessionEmotionRepository.findOne({
       where: { focusSession: { id: sessionId } },
     });
@@ -109,9 +126,7 @@ async cancelFocusSession(sessionId: number, focusedMinutes: number): Promise<Foc
     const session = await this.focusSessionsRepository.findOne({
       where: { id: sessionId },
     });
-    if (!session) {
-      throw new NotFoundException('Focus session not found');
-    }
+    if (!session) throw new NotFoundException('Focus session not found');
     return session;
   }
 }

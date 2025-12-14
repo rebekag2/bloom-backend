@@ -14,7 +14,10 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import type { Request } from 'express';
 
-import { CancelFocusSessionDto, CreateFocusSessionDto, FinishFocusSessionDto } from './dto/focus-session.dto';
+import {
+  CreateFocusSessionDto,
+  FinishFocusSessionDto,
+} from './dto/focus-session.dto';
 
 @ApiTags('Focus Sessions')
 @ApiBearerAuth('access-token')
@@ -23,7 +26,7 @@ import { CancelFocusSessionDto, CreateFocusSessionDto, FinishFocusSessionDto } f
 export class FocusSessionsController {
   constructor(private readonly focusSessionsService: FocusSessionsService) {}
 
-  // Start session with duration and before emotion
+  // START
   @Post('start')
   async startSession(
     @Req() req: Request,
@@ -39,19 +42,25 @@ export class FocusSessionsController {
     );
   }
 
-@Patch('session/:id/cancel')
-async cancelSession(
-  @Req() req: Request,
-  @Param('id') sessionId: number,
-  @Body() cancelSessionDto: CancelFocusSessionDto,
-) {
-    const userId = (req.user as any)?.sub;
-    if (!userId) throw new NotFoundException('Unauthorized');
-  
-  return this.focusSessionsService.cancelFocusSession(sessionId, cancelSessionDto.focusedMinutes);
-}
+  // CANCEL
+  @Patch('session/:id/cancel')
+  async cancelSession(@Param('id') sessionId: number) {
+    return this.focusSessionsService.cancelFocusSession(sessionId);
+  }
 
-  // Get all focus sessions for logged in user
+  // FINISH
+  @Patch('session/:id/finish')
+  async finishSession(
+    @Param('id') sessionId: number,
+    @Body() body: FinishFocusSessionDto,
+  ) {
+    return this.focusSessionsService.finishFocusSession(
+      sessionId,
+      body.emotionAfterId,
+    );
+  }
+
+  // GET USER SESSIONS
   @Get()
   async getUserSessions(@Req() req: Request) {
     const userId = (req.user as any)?.sub;
@@ -60,7 +69,7 @@ async cancelSession(
     return this.focusSessionsService.getFocusSessionsByUser(userId);
   }
 
-  // Get session details by id (optional)
+  // GET SINGLE SESSION
   @Get('session/:id')
   async getSessionDetails(@Param('id') sessionId: number) {
     return this.focusSessionsService.getFocusSessionById(sessionId);
