@@ -15,6 +15,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import type { Request } from 'express';
 
 import {
+  CancelFocusSessionDto,
   CreateFocusSessionDto,
   FinishFocusSessionDto,
 } from './dto/focus-session.dto';
@@ -26,7 +27,9 @@ import {
 export class FocusSessionsController {
   constructor(private readonly focusSessionsService: FocusSessionsService) {}
 
+  // ======================
   // START
+  // ======================
   @Post('start')
   async startSession(
     @Req() req: Request,
@@ -42,25 +45,67 @@ export class FocusSessionsController {
     );
   }
 
+  // ======================
   // CANCEL
+  // ======================
   @Patch('session/:id/cancel')
-  async cancelSession(@Param('id') sessionId: number) {
-    return this.focusSessionsService.cancelFocusSession(sessionId);
+  async cancelSession(
+    @Req() req: Request,
+    @Param('id') sessionId: number,
+    @Body() body: CancelFocusSessionDto,
+  ) {
+    const userId = (req.user as any)?.sub;
+    if (!userId) throw new NotFoundException('Unauthorized');
+
+    return this.focusSessionsService.cancelFocusSession(
+      sessionId,
+      body.focusedMinutes,
+    );
   }
 
+  // ======================
   // FINISH
+  // ======================
   @Patch('session/:id/finish')
   async finishSession(
+    @Req() req: Request,
     @Param('id') sessionId: number,
     @Body() body: FinishFocusSessionDto,
   ) {
+    const userId = (req.user as any)?.sub;
+    if (!userId) throw new NotFoundException('Unauthorized');
+
     return this.focusSessionsService.finishFocusSession(
       sessionId,
       body.emotionAfterId,
     );
   }
 
-  // GET USER SESSIONS
+  // ======================
+  // SUMMARY (DASHBOARD)
+  // ======================
+  @Get('summary')
+  async getSummary(@Req() req: Request) {
+    const userId = (req.user as any)?.sub;
+    if (!userId) throw new NotFoundException('Unauthorized');
+
+    return this.focusSessionsService.getUserSummary(userId);
+  }
+
+  // ======================
+  // HISTORY WITH EMOTIONS
+  // ======================
+  @Get('with-emotions')
+  async getSessionsWithEmotions(@Req() req: Request) {
+    const userId = (req.user as any)?.sub;
+    if (!userId) throw new NotFoundException('Unauthorized');
+
+    return this.focusSessionsService.getSessionsWithEmotions(userId);
+  }
+
+  // ======================
+  // BASIC FETCHES
+  // ======================
   @Get()
   async getUserSessions(@Req() req: Request) {
     const userId = (req.user as any)?.sub;
@@ -69,7 +114,6 @@ export class FocusSessionsController {
     return this.focusSessionsService.getFocusSessionsByUser(userId);
   }
 
-  // GET SINGLE SESSION
   @Get('session/:id')
   async getSessionDetails(@Param('id') sessionId: number) {
     return this.focusSessionsService.getFocusSessionById(sessionId);

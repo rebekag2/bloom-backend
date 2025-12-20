@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, OneToOne } from 'typeorm';
 import { User } from './users.entity';
+import { FocusSessionEmotion } from './focus-session-emotion.entity';
 
 @Entity({ name: 'focussessions' })
 export class FocusSession {
@@ -21,6 +22,14 @@ export class FocusSession {
 
   @Column({ type: 'tinyint', width: 1, default: 0 })
   canceled: boolean;
+  
+  @OneToOne(
+    () => FocusSessionEmotion,
+    (emotion) => emotion.focusSession,
+    { cascade: true, eager: true },
+  )
+  @JoinColumn()
+  focusSessionEmotion: FocusSessionEmotion;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

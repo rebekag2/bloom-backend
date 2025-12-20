@@ -12,15 +12,15 @@ export class FocusSessionsService {
   constructor(
     @InjectRepository(FocusSession)
     private readonly focusSessionsRepository: Repository<FocusSession>,
-
     @InjectRepository(FocusSessionEmotion)
     private readonly focusSessionEmotionRepository: Repository<FocusSessionEmotion>,
-
     @InjectRepository(Emotion)
     private readonly emotionRepository: Repository<Emotion>,
   ) {}
 
+  // ======================
   // START SESSION
+  // ======================
   async startFocusSession(
     userId: number,
     durationMinutes: number,
@@ -32,7 +32,7 @@ export class FocusSessionsService {
       user: { id: userId } as User,
       startTime: now,
       endTime: null,
-      durationMinutes, // planned duration (temporary)
+      durationMinutes, // planned duration (will be overridden)
       canceled: false,
     });
 
@@ -51,48 +51,64 @@ export class FocusSessionsService {
       emotionAfter: null,
     });
 
+    session.focusSessionEmotion = sessionEmotion;
     await this.focusSessionEmotionRepository.save(sessionEmotion);
 
     return savedSession;
   }
 
-  // CANCEL SESSION (same time logic as finish)
-  async cancelFocusSession(sessionId: number): Promise<FocusSession> {
+  // ======================
+  // CANCEL SESSION
+  // ======================
+  async cancelFocusSession(
+    sessionId: number,
+    focusedMinutes: number,
+  ): Promise<FocusSession> {
     const session = await this.focusSessionsRepository.findOne({
       where: { id: sessionId },
     });
-    if (!session) throw new NotFoundException('Focus session not found');
 
-    const endTime = new Date();
-    const diffMs = endTime.getTime() - session.startTime.getTime();
-    const focusedMinutes = Math.max(1, Math.floor(diffMs / 60000));
+    if (!session) {
+      throw new NotFoundException('Focus session not found');
+    }
 
-    session.endTime = endTime;
-    session.durationMinutes = focusedMinutes;
     session.canceled = true;
+    session.endTime = new Date();
+    session.durationMinutes = focusedMinutes;
 
     return this.focusSessionsRepository.save(session);
   }
 
+  // ======================
   // FINISH SESSION
+  // ======================
   async finishFocusSession(
     sessionId: number,
     emotionAfterId: number,
   ): Promise<FocusSession> {
     const session = await this.focusSessionsRepository.findOne({
-      where: { id: sessionId },
+       where: { id: sessionId },
     });
-    if (!session) throw new NotFoundException('Focus session not found');
+  
+  
+
+    if (!session) {
+      throw new NotFoundException('Focus session not found');
+    }
 
     const emotionAfter = await this.emotionRepository.findOneBy({
       id: emotionAfterId,
     });
+
     if (!emotionAfter) {
       throw new NotFoundException('Emotion after session not found');
     }
 
     const endTime = new Date();
+
+    // 🔑 backend is source of truth
     const diffMs = endTime.getTime() - session.startTime.getTime();
+  
     const focusedMinutes = Math.max(1, Math.floor(diffMs / 60000));
 
     session.endTime = endTime;
@@ -103,6 +119,7 @@ export class FocusSessionsService {
 
     const sessionEmotion = await this.focusSessionEmotionRepository.findOne({
       where: { focusSession: { id: sessionId } },
+      relations: ['emotionBefore', 'emotionAfter'],
     });
 
     if (!sessionEmotion) {
@@ -115,18 +132,83 @@ export class FocusSessionsService {
     return session;
   }
 
-  async getFocusSessionsByUser(userId: number): Promise<FocusSession[]> {
-    return this.focusSessionsRepository.find({
+  // ======================
+  // DASHBOARD SUMMARY
+  // ======================
+  async getUserSummary(userId: number) {
+    const sessions = await this.focusSessionsRepository.find({
       where: { user: { id: userId } },
-      order: { startTime: 'DESC' },
     });
+
+    const totalSessions = sessions.length;
+    const completedSessions = sessions.filter(s => !s.canceled).length;
+    const canceledSessions = sessions.filter(s => s.canceled).length;
+
+    const totalFocusedMinutes = sessions.reduce(
+      (sum, s) => sum + (s.durationMinutes ?? 0),
+      0,
+    );
+
+    const averageSessionMinutes =
+      totalSessions > 0
+        ? Math.round(totalFocusedMinutes / totalSessions)
+        : 0;
+
+    return {
+      totalSessions,
+      completedSessions,
+      canceledSessions,
+      totalFocusedMinutes,
+      averageSessionMinutes,
+    };
   }
 
+  // ======================
+  // SESSIONS WITH EMOTIONS
+  // ======================
+  async getSessionsWithEmotions(userId: number) {
+    const sessions = await this.focusSessionsRepository.find({
+      where: { user: { id: userId } },
+      order: { startTime: 'DESC' },
+      relations: ['focusSessionEmotion', 'focusSessionEmotion.emotionBefore', 'focusSessionEmotion.emotionAfter'],
+    });
+
+    return sessions.map(session => ({
+      id: session.id,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      durationMinutes: session.durationMinutes,
+      canceled: session.canceled,
+      emotionBefore: session.focusSessionEmotion?.emotionBefore?.name ?? null,
+      emotionAfter: session.focusSessionEmotion?.emotionAfter?.name ?? null,
+    }));
+  }
+
+  // ======================
+  // BASIC FETCHES
+  // ======================
+ async getFocusSessionsByUser(userId: number) {
+  return this.focusSessionsRepository.find({
+    where: { user: { id: userId } },
+    relations: {
+      focusSessionEmotion: {
+        emotionBefore: true,
+        emotionAfter: true,
+      },
+    },
+    order: { startTime: 'DESC' },
+  });
+}
+
   async getFocusSessionById(sessionId: number): Promise<FocusSession> {
-    const session = await this.focusSessionsRepository.findOne({
+    const session = await this.focusSessionsRepository.find({
       where: { id: sessionId },
     });
-    if (!session) throw new NotFoundException('Focus session not found');
-    return session;
+
+    if (!session) {
+      throw new NotFoundException('Focus session not found');
+    }
+
+    return session[0];
   }
 }

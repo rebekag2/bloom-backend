@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, OneToOne } from 'typeorm';
 import { FocusSession } from './focus-session.entity';
 import { Emotion } from './emotions.entity';
 
@@ -7,18 +7,17 @@ export class FocusSessionEmotion {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => FocusSession)
-  @JoinColumn({ name: 'focus_session_id' })
+  @OneToOne(() => FocusSession, session => session.focusSessionEmotion, {
+    onDelete: 'CASCADE',
+  })
   focusSession: FocusSession;
 
-  @ManyToOne(() => Emotion)
-  @JoinColumn({ name: 'emotion_before_id' })
+  @ManyToOne(() => Emotion, { eager: true })
+  @JoinColumn( { name: 'emotion_before_id'})
   emotionBefore: Emotion;
 
-  @ManyToOne(() => Emotion)
-  @JoinColumn({ name: 'emotion_after_id' })
+  @ManyToOne(() => Emotion, { nullable: true, eager: true })
+  @JoinColumn( { name: 'emotion_after_id'})
   emotionAfter: Emotion | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
-  createdAt: Date;
 }
