@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 
 
 dotenv.config();
@@ -10,8 +11,21 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe());
 
+  app.enableCors({
+    origin: 'http://localhost:4200', 
+    credentials: true,                
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
+
+  
   const config = new DocumentBuilder()
     .setTitle('My API')
     .setDescription('API description for my app')

@@ -15,7 +15,7 @@ export enum DaysOfWeek {
 export class UpdateSettingsDto {
   @ApiProperty({example: true, description: 'Enable or disable notification sound' })
   @IsOptional()
-  @IsBoolean()
+  // @IsBoolean()
   notificationSound?: boolean;
 
   @ApiProperty({

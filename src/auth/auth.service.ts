@@ -23,7 +23,7 @@ export class AuthService {
     return user;
   }
 
-  async login(user: User) {
+  private generateTokens(user: User) {
     const payload = { sub: user.id, username: user.username };
 
     const accessToken = this.jwtService.sign(payload, {
@@ -36,17 +36,26 @@ export class AuthService {
       expiresIn: '7d',
     });
 
-    const hashed = await bcrypt.hash(refreshToken, 10);
-    await this.usersRepo.update(user.id, { refreshToken: hashed });
-
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return { accessToken, refreshToken };
   }
 
-  async logout(userId: number) {
-    await this.usersRepo.update(userId, { refreshToken: null });
+  async login(user: User) {
+    const tokens = this.generateTokens(user);
+
+    const hashed = await bcrypt.hash(tokens.refreshToken, 10);
+    await this.usersRepo.update(user.id, { refreshToken: hashed });
+
+    return tokens;
+  }
+
+  async verifyRefreshToken(refreshToken: string) {
+    try {
+      return this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   async refresh(userId: number, refreshToken: string) {
@@ -55,18 +64,23 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token not found');
     }
 
+    // Compare cookie refresh token with hashed DB token
     const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
     if (!isValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const payload = { sub: user.id, username: user.username };
+    // Generate new tokens
+    const tokens = this.generateTokens(user);
 
-    const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: '10m',
-    });
+    // Rotate refresh token
+    const hashed = await bcrypt.hash(tokens.refreshToken, 10);
+    await this.usersRepo.update(user.id, { refreshToken: hashed });
 
-    return { accessToken };
+    return tokens;
+  }
+
+  async logout(userId: number) {
+    await this.usersRepo.update(userId, { refreshToken: null });
   }
 }

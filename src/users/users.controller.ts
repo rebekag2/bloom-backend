@@ -1,9 +1,10 @@
-import { Body, Controller, Post, HttpException, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Post, HttpException, HttpStatus, Res } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { AuthService } from 'src/auth/auth.service';
 import { User } from 'src/entities/users.entity';
+import type { Response } from 'express';
 
 @Controller('users')
 export class UsersController {
@@ -13,22 +14,28 @@ export class UsersController {
   ) {}
 
   @Post('signup')
-  async signup(@Body() createUserDto: CreateUserDto) {
+  async signup(@Body() createUserDto: CreateUserDto, @Res() res: Response) {
     try {
       const newUser = await this.usersService.createUser(createUserDto);
 
-      // Immediately log the user in after signup
       const tokens = await this.authService.login(newUser);
 
-      return {
+      res.cookie('refreshToken', tokens.refreshToken, {
+        httpOnly: true,
+        secure: false, // true in production with HTTPS
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.json({
         message: 'Signup successful',
         user: {
           id: newUser.id,
           username: newUser.username,
         },
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      };
+      });
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
@@ -38,21 +45,28 @@ export class UsersController {
   }
 
   @Post('login')
-  async login(@Body() loginUserDto: LoginUserDto) {
+  async login(@Body() loginUserDto: LoginUserDto, @Res() res: Response) {
     try {
       const user = await this.usersService.loginUser(loginUserDto);
 
       const tokens = await this.authService.login(user as User);
 
-      return {
+      res.cookie('refreshToken', tokens.refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.json({
         message: 'Login successful',
         user: {
           id: user.id,
           username: user.username,
         },
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      };
+      });
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);

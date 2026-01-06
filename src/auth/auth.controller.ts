@@ -1,32 +1,58 @@
-import { Body, Controller, Post, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
-import { RefreshJwtGuard } from './refresh-jwt.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import type { Response, Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @UseGuards(RefreshJwtGuard)
   @Post('refresh')
-  async refresh(@Req() req, @Body() body: { refreshToken: string }) {
-    const user = req.user; // user payload from RefreshJwtGuard
-    const refreshToken = body.refreshToken;
+  async refresh(@Req() req: Request, @Res() res: Response) {
+    const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token is missing');
     }
 
-    return this.authService.refresh(user.sub, refreshToken);
+    // Verify JWT and extract user ID
+    const payload = await this.authService.verifyRefreshToken(refreshToken);
+
+    // Generate new tokens and rotate refresh token in DB
+    const tokens = await this.authService.refresh(payload.sub, refreshToken);
+
+    // Set new refresh token cookie
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: false, // true in production with HTTPS
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.json({ accessToken: tokens.accessToken });
   }
 
-  @ApiBearerAuth('access-token')     
-  @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req) {
-    const user = req.user;
-    await this.authService.logout(user.sub);
-    return { message: 'Logged out successfully' };
+  async logout(@Req() req: Request, @Res() res: Response) {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (refreshToken) {
+      try {
+        const payload = await this.authService.verifyRefreshToken(refreshToken);
+        await this.authService.logout(payload.sub);
+      } catch {
+        // ignore invalid token on logout
+      }
+    }
+
+    // Clear refresh cookie
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    return res.json({ message: 'Logged out successfully' });
   }
 }
