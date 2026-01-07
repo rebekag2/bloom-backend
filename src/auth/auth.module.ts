@@ -9,12 +9,14 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from 'src/entities/users.entity';
 import { RefreshJwtStrategy } from './refresh-jwt.strategy';
+import { EmailModule } from 'src/email/email.module';
 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     PassportModule,
+    EmailModule,
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET,
       signOptions: { expiresIn: '30m' }, // 30 minutes

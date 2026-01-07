@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from 'src/entities/users.entity';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -64,16 +65,13 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token not found');
     }
 
-    // Compare cookie refresh token with hashed DB token
     const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
     if (!isValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // Generate new tokens
     const tokens = this.generateTokens(user);
 
-    // Rotate refresh token
     const hashed = await bcrypt.hash(tokens.refreshToken, 10);
     await this.usersRepo.update(user.id, { refreshToken: hashed });
 
@@ -82,5 +80,42 @@ export class AuthService {
 
   async logout(userId: number) {
     await this.usersRepo.update(userId, { refreshToken: null });
+  }
+
+  // ⭐ STEP 2A — REQUEST PASSWORD RESET
+  async requestPasswordReset(email: string) {
+    const user = await this.usersRepo.findOne({ where: { email } });
+
+    // Always return success to avoid email enumeration
+    if (!user) return;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = expires;
+
+    await this.usersRepo.save(user);
+
+    return token; // controller will send email
+  }
+
+  // ⭐ STEP 2B — RESET PASSWORD
+  async resetPassword(token: string, newPassword: string) {
+    const user = await this.usersRepo.findOne({
+      where: { resetPasswordToken: token },
+    });
+
+    if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+
+    await this.usersRepo.save(user);
+
+    return true;
   }
 }
